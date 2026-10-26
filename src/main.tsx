@@ -11,7 +11,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('Equinox failed to render', error, info)
+    console.error('Tango Unlimited failed to render', error, info)
   }
 
   render() {

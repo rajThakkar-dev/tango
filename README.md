@@ -1,6 +1,6 @@
-# Equinox
+# Tango Unlimited
 
-An original, free-to-host sun-and-moon logic game with deterministic daily puzzles and unlimited generated levels.
+A free-to-host sun-and-moon logic game with deterministic daily puzzles and unlimited generated levels. Its compact gameplay interface follows the familiar conventions of the popular Tango puzzle while keeping the generator and application independent.
 
 ## Features
 
