@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { countSolutions, isBoardComplete, isBoardPossible } from './engine'
-import { dailySeed, generatePuzzle } from './generator'
+import { dailySeed, generateLevelPuzzle, generatePuzzle, levelDifficulty } from './generator'
 import type { Board } from './types'
 
 describe('puzzle engine', () => {
@@ -29,5 +29,21 @@ describe('puzzle engine', () => {
 
   it('uses the UTC date for daily seeds', () => {
     expect(dailySeed(new Date('2026-10-26T23:59:59Z'))).toBe('daily-2026-10-26')
+  })
+
+  it('ramps numbered levels from assisted to hard while keeping unique solutions', () => {
+    const first = generateLevelPuzzle(1)
+    const middle = generateLevelPuzzle(10)
+    const hard = generateLevelPuzzle(20)
+
+    expect(levelDifficulty(1)).toBe('easy')
+    expect(levelDifficulty(10)).toBe('medium')
+    expect(levelDifficulty(20)).toBe('hard')
+    expect(first.relations.length).toBeGreaterThan(hard.relations.length)
+    expect(first.givens.flat().filter((cell) => cell !== null).length)
+      .toBeGreaterThan(hard.givens.flat().filter((cell) => cell !== null).length)
+    for (const puzzle of [first, middle, hard]) {
+      expect(countSolutions(puzzle.givens, puzzle.relations)).toBe(1)
+    }
   })
 })

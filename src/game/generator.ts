@@ -52,11 +52,15 @@ const SETTINGS: Record<Difficulty, { relations: number; targetGivens: number }> 
   hard: { relations: 7, targetGivens: 6 },
 }
 
-export function generatePuzzle(seed: string, difficulty: Difficulty): Puzzle {
-  const random = seededRandom(`equinox-v1|${seed}|${difficulty}`)
+interface GenerationSettings {
+  relations: number
+  targetGivens: number
+}
+
+export function generatePuzzle(seed: string, difficulty: Difficulty, tuning: GenerationSettings = SETTINGS[difficulty]): Puzzle {
+  const random = seededRandom(`equinox-v1|${seed}|${difficulty}|${tuning.relations}|${tuning.targetGivens}`)
   const solution = createSolution(random)
-  const settings = SETTINGS[difficulty]
-  const relations = shuffle(relationCandidates(solution), random).slice(0, settings.relations)
+  const relations = shuffle(relationCandidates(solution), random).slice(0, tuning.relations)
   const givens: Board = solution.map((row) => [...row])
   const cells = shuffle(
     Array.from({ length: BOARD_SIZE * BOARD_SIZE }, (_, index) => ({
@@ -68,7 +72,7 @@ export function generatePuzzle(seed: string, difficulty: Difficulty): Puzzle {
 
   let givenCount = BOARD_SIZE * BOARD_SIZE
   for (const { row, col } of cells) {
-    if (givenCount <= settings.targetGivens) break
+    if (givenCount <= tuning.targetGivens) break
     const previous = givens[row][col]
     givens[row][col] = null
     if (countSolutions(givens, relations, 2) === 1) {
@@ -88,6 +92,21 @@ export function generatePuzzle(seed: string, difficulty: Difficulty): Puzzle {
     givens: cloneBoard(givens),
     relations,
   }
+}
+
+export function levelDifficulty(level: number): Difficulty {
+  if (level <= 5) return 'easy'
+  if (level <= 15) return 'medium'
+  return 'hard'
+}
+
+export function generateLevelPuzzle(level: number): Puzzle {
+  const safeLevel = Math.max(1, Math.floor(level))
+  const tuning: GenerationSettings = {
+    relations: Math.max(6, 13 - Math.floor((safeLevel - 1) / 3)),
+    targetGivens: Math.max(5, 15 - Math.floor((safeLevel - 1) / 2)),
+  }
+  return generatePuzzle(`level-${safeLevel}`, levelDifficulty(safeLevel), tuning)
 }
 
 export function dailySeed(date = new Date()): string {

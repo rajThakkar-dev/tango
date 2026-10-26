@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { cloneBoard, getViolations, isBoardComplete } from './game/engine'
-import { dailySeed, generatePuzzle } from './game/generator'
+import { dailySeed, generateLevelPuzzle, generatePuzzle, levelDifficulty } from './game/generator'
 import type { Board, Difficulty, GameMode, Mark, Puzzle, Relation } from './game/types'
 
 interface Stats { solved: number; bestTime: number | null; dailyStreak: number; lastDaily: string | null }
 const DEFAULT_STATS: Stats = { solved: 0, bestTime: null, dailyStreak: 0, lastDaily: null }
-const STORAGE = { stats: 'tango-v2-stats', level: 'tango-v2-level', infinite: 'tango-v2-infinite' }
+const STORAGE = { stats: 'tango-v2-stats', level: 'tango-v2-level', infinite: 'tango-v2-infinite', unlocked: 'tango-levels-v1-unlocked' }
 
 function loadStats(): Stats {
   try { return { ...DEFAULT_STATS, ...JSON.parse(localStorage.getItem(STORAGE.stats) ?? '{}') } }
@@ -14,6 +14,14 @@ function loadStats(): Stats {
 
 function formatTime(seconds: number) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
+}
+
+function levelDifficultyLabel(level: number) {
+  if (level <= 2) return 'Very easy'
+  if (level <= 5) return 'Easy'
+  if (level <= 10) return 'Medium'
+  if (level <= 15) return 'Challenging'
+  return 'Hard'
 }
 
 function SymbolIcon({ mark, tiny = false }: { mark: Mark; tiny?: boolean }) {
@@ -70,7 +78,11 @@ function GameBoard({ puzzle, board, violations, completed, onCell }: {
 function App() {
   const [mode, setMode] = useState<GameMode>('daily')
   const [difficulty, setDifficulty] = useState<Difficulty>('medium')
-  const [level, setLevel] = useState(() => Number(localStorage.getItem(STORAGE.level) ?? 1))
+  const [highestUnlocked, setHighestUnlocked] = useState(() => Math.max(1, Number(localStorage.getItem(STORAGE.unlocked) ?? 1)))
+  const [level, setLevel] = useState(() => Math.min(
+    Math.max(1, Number(localStorage.getItem(STORAGE.level) ?? 1)),
+    Math.max(1, Number(localStorage.getItem(STORAGE.unlocked) ?? 1)),
+  ))
   const [infiniteIndex, setInfiniteIndex] = useState(() => Number(localStorage.getItem(STORAGE.infinite) ?? 1))
   const [board, setBoard] = useState<Board>([])
   const [history, setHistory] = useState<Board[]>([])
@@ -83,8 +95,11 @@ function App() {
   const completionRecorded = useRef(false)
 
   const seed = mode === 'daily' ? dailySeed() : mode === 'levels' ? `level-${level}` : `infinite-${infiniteIndex}`
-  const activeDifficulty = mode === 'daily' ? 'medium' : difficulty
-  const puzzle = useMemo(() => generatePuzzle(seed, activeDifficulty), [seed, activeDifficulty])
+  const activeDifficulty = mode === 'levels' ? levelDifficulty(level) : mode === 'daily' ? 'medium' : difficulty
+  const puzzle = useMemo(
+    () => mode === 'levels' ? generateLevelPuzzle(level) : generatePuzzle(seed, activeDifficulty),
+    [seed, activeDifficulty, level, mode],
+  )
 
   useEffect(() => {
     setBoard(cloneBoard(puzzle.givens)); setHistory([]); setElapsed(0); setCompleted(false); completionRecorded.current = false
@@ -100,6 +115,10 @@ function App() {
     localStorage.setItem(STORAGE.level, String(level)); localStorage.setItem(STORAGE.infinite, String(infiniteIndex))
   }, [level, infiniteIndex])
 
+  useEffect(() => {
+    localStorage.setItem(STORAGE.unlocked, String(highestUnlocked))
+  }, [highestUnlocked])
+
   const violations = useMemo(() => autoCheck ? getViolations(board, puzzle.relations) : new Set<string>(), [autoCheck, board, puzzle.relations])
 
   useEffect(() => {
@@ -107,6 +126,7 @@ function App() {
     setCompleted(true)
     if (completionRecorded.current) return
     completionRecorded.current = true
+    if (mode === 'levels') setHighestUnlocked((current) => Math.max(current, level + 1))
     setStats((current) => {
       let dailyStreak = current.dailyStreak; let lastDaily = current.lastDaily
       if (mode === 'daily') {
@@ -118,7 +138,7 @@ function App() {
       const next = { solved: current.solved + 1, bestTime: current.bestTime === null ? elapsed : Math.min(current.bestTime, elapsed), dailyStreak, lastDaily }
       localStorage.setItem(STORAGE.stats, JSON.stringify(next)); return next
     })
-  }, [board, completed, elapsed, mode, puzzle.relations])
+  }, [board, completed, elapsed, level, mode, puzzle.relations])
 
   const updateCell = useCallback((row: number, col: number, reverse = false) => {
     if (puzzle.givens[row][col] !== null || completed) return
@@ -168,15 +188,7 @@ function App() {
           <div className="settings-wrap">
             <button className="settings-button" onClick={() => setSettingsOpen((value) => !value)} aria-expanded={settingsOpen}>Settings <span>⌄</span></button>
             {settingsOpen && <section className="settings-popover" aria-label="Game settings">
-              <div className="setting-group"><label>Game mode</label><div className="segmented">
-                {(['daily', 'infinite', 'levels'] as GameMode[]).map((value) => <button key={value} className={mode === value ? 'selected' : ''} onClick={() => setMode(value)}>{value === 'infinite' ? 'Unlimited' : value}</button>)}
-              </div></div>
-              {mode !== 'daily' && <div className="setting-group"><label>Difficulty</label><div className="segmented">
-                {(['easy', 'medium', 'hard'] as Difficulty[]).map((value) => <button key={value} className={difficulty === value ? 'selected' : ''} onClick={() => setDifficulty(value)}>{value}</button>)}
-              </div></div>}
-              {mode === 'levels' && <div className="level-stepper"><span>Level</span><div><button onClick={() => setLevel((value) => Math.max(1, value - 1))}>−</button><b>{level}</b><button onClick={() => setLevel((value) => value + 1)}>+</button></div></div>}
               <label className="check-setting"><span>Auto-check mistakes</span><input type="checkbox" checked={autoCheck} onChange={(event) => setAutoCheck(event.target.checked)} /></label>
-              {mode === 'infinite' && <button className="new-game-button" onClick={() => { setInfiniteIndex((value) => value + 1); setSettingsOpen(false) }}>New puzzle</button>}
               <div className="mini-stats"><span><b>{stats.solved}</b> Solved</span><span><b>{stats.dailyStreak}</b> Day streak</span><span><b>{stats.bestTime === null ? '—' : formatTime(stats.bestTime)}</b> Best</span></div>
             </section>}
           </div>
@@ -185,6 +197,31 @@ function App() {
 
       <main className="workspace">
         <section className="game-column">
+          <nav className="primary-modes" aria-label="Game mode">
+            {(['daily', 'infinite', 'levels'] as GameMode[]).map((value) => (
+              <button key={value} className={mode === value ? 'active' : ''} onClick={() => setMode(value)}>
+                {value === 'infinite' ? 'Unlimited' : value}
+              </button>
+            ))}
+          </nav>
+
+          {mode !== 'daily' && <div className="mode-options">
+            {mode === 'infinite' && <>
+            <div className="difficulty-tabs" aria-label="Difficulty">
+              {(['easy', 'medium', 'hard'] as Difficulty[]).map((value) => (
+                <button key={value} className={difficulty === value ? 'active' : ''} onClick={() => setDifficulty(value)}>{value}</button>
+              ))}
+            </div>
+            <button className="new-puzzle-link" onClick={() => setInfiniteIndex((value) => value + 1)}>New puzzle</button>
+            </>}
+            {mode === 'levels' && <div className="level-control" aria-label="Level selector">
+              <button aria-label="Previous level" disabled={level === 1} onClick={() => setLevel((value) => Math.max(1, value - 1))}>‹</button>
+              <span>Level <b>{level}</b> <em>{levelDifficultyLabel(level)}</em></span>
+              <button aria-label="Next level" title={level >= highestUnlocked ? 'Complete this level to unlock the next one' : 'Next level'} disabled={level >= highestUnlocked} onClick={() => setLevel((value) => Math.min(highestUnlocked, value + 1))}>›</button>
+            </div>}
+            {mode === 'levels' && <span className="unlock-note">Unlocked through {highestUnlocked}</span>}
+          </div>}
+
           <div className="mode-line"><span>{modeLabel}</span><span>#{puzzle.id.split('-')[1]}</span></div>
           <div className="board-card">
             <GameBoard puzzle={puzzle} board={board} violations={violations} completed={completed} onCell={updateCell} />
