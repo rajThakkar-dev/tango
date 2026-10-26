@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/game/engine.test.ts","./src/game/engine.ts","./src/game/generator.ts","./src/game/random.ts","./src/game/types.ts"],"version":"5.7.3"}
