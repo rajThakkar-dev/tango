@@ -109,7 +109,11 @@ button { color: inherit; }
 
 .piece { width: 62%; height: 62%; overflow: visible; animation: piece-in .15s ease-out; }
 .sun-piece circle { fill: var(--sun); stroke: var(--sun-edge); stroke-width: 5; }
-.moon-piece path { fill: var(--moon); stroke: var(--moon-edge); stroke-width: 4; stroke-linejoin: round; }
+.moon-piece { position: relative; display: inline-block; }
+.moon-piece:not(.tiny) { width: 45%; height: 45%; }
+.moon-piece::before, .moon-piece::after { content: ''; position: absolute; inset: 0; -webkit-mask: url('/moon-702471.png') center / contain no-repeat; mask: url('/moon-702471.png') center / contain no-repeat; }
+.moon-piece::before { background: var(--moon-edge); transform: scaleX(-1) scale(1.08); }
+.moon-piece::after { background: var(--moon); transform: scaleX(-1); }
 .piece.tiny { width: 19px; height: 19px; flex: 0 0 auto; vertical-align: middle; margin: 0 1px; }
 
 .relation { position: absolute; z-index: 6; width: 20px; height: 20px; display: grid; place-items: center; background: #fff; color: #957d5b; font-size: 15px; line-height: 1; font-weight: 600; pointer-events: none; }
@@ -118,7 +122,7 @@ button { color: inherit; }
 .fixed + .relation { background: #fff; }
 .board-complete { animation: win-pulse .55s ease; }
 
-.win-overlay { position: absolute; inset: 38% 18%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,.96); border: 1px solid #bbb; border-radius: 7px; box-shadow: 0 6px 24px rgba(0,0,0,.14); animation: pop-in .22s ease-out; }
+.win-overlay { position: absolute; z-index: 20; inset: 38% 18%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,.96); border: 1px solid #bbb; border-radius: 7px; box-shadow: 0 6px 24px rgba(0,0,0,.14); pointer-events: none; animation: pop-in .22s ease-out; }
 .win-overlay span { color: #31764d; font-size: 13px; font-weight: 600; }
 .win-overlay strong { font-size: 24px; margin-top: 2px; }
 
@@ -134,6 +138,8 @@ button { color: inherit; }
 .how-to-card ul { margin: 0; padding: 0 24px 20px 38px; font-size: 12px; line-height: 1.45; }
 .how-to-card li { margin: 0 0 12px; padding-left: 2px; }
 .how-to-card li:last-child { margin-bottom: 0; }
+.icon-credit { margin: 10px 0 0; color: #777; font-size: 9px; text-align: center; }
+.icon-credit a { color: #666; }
 
 @keyframes piece-in { from { transform: scale(.65); opacity: .2; } }
 @keyframes pop-in { from { transform: translateY(-4px); opacity: 0; } }

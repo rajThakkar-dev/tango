@@ -6,6 +6,7 @@ import type { Board, Difficulty, GameMode, Mark, Puzzle, Relation } from './game
 interface Stats { solved: number; bestTime: number | null; dailyStreak: number; lastDaily: string | null }
 const DEFAULT_STATS: Stats = { solved: 0, bestTime: null, dailyStreak: 0, lastDaily: null }
 const STORAGE = { stats: 'tango-v2-stats', level: 'tango-v2-level', infinite: 'tango-v2-infinite', unlocked: 'tango-levels-v1-unlocked' }
+const AUTO_CHECK_DELAY_MS = 1600
 
 function loadStats(): Stats {
   try { return { ...DEFAULT_STATS, ...JSON.parse(localStorage.getItem(STORAGE.stats) ?? '{}') } }
@@ -26,7 +27,7 @@ function levelDifficultyLabel(level: number) {
 
 function SymbolIcon({ mark, tiny = false }: { mark: Mark; tiny?: boolean }) {
   if (mark === 0) return <svg className={`piece sun-piece ${tiny ? 'tiny' : ''}`} viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="34" /></svg>
-  return <svg className={`piece moon-piece ${tiny ? 'tiny' : ''}`} viewBox="0 0 100 100" aria-hidden="true"><path d="M70 17c-2 0-4 0-6 1 9 6 15 17 15 29 0 21-17 38-38 38-6 0-12-1-17-4 7 8 18 13 30 13 22 0 40-18 40-40 0-16-10-30-24-37Z" /></svg>
+  return <span className={`piece moon-piece ${tiny ? 'tiny' : ''}`} aria-hidden="true" />
 }
 
 function ArrowIcon({ direction = 'left' }: { direction?: 'left' | 'up' | 'down' }) {
@@ -89,6 +90,7 @@ function App() {
   const [elapsed, setElapsed] = useState(0)
   const [completed, setCompleted] = useState(false)
   const [autoCheck, setAutoCheck] = useState(true)
+  const [violations, setViolations] = useState<Set<string>>(new Set())
   const [rulesOpen, setRulesOpen] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [stats, setStats] = useState<Stats>(loadStats)
@@ -119,7 +121,16 @@ function App() {
     localStorage.setItem(STORAGE.unlocked, String(highestUnlocked))
   }, [highestUnlocked])
 
-  const violations = useMemo(() => autoCheck ? getViolations(board, puzzle.relations) : new Set<string>(), [autoCheck, board, puzzle.relations])
+  useEffect(() => {
+    setViolations(new Set())
+    if (!autoCheck || completed || board.length === 0) return
+
+    const timeout = window.setTimeout(() => {
+      setViolations(getViolations(board, puzzle.relations))
+    }, AUTO_CHECK_DELAY_MS)
+
+    return () => window.clearTimeout(timeout)
+  }, [autoCheck, board, completed, puzzle.relations])
 
   useEffect(() => {
     if (!board.length || completed || !isBoardComplete(board, puzzle.relations)) return
@@ -239,6 +250,7 @@ function App() {
               <li>Every puzzle has one answer and can be solved without guessing.</li>
             </ul>}
           </section>
+          <p className="icon-credit">Moon icon by <a href="https://www.flaticon.com/authors/good-ware" target="_blank" rel="noreferrer">Good Ware</a> from <a href="https://www.flaticon.com/free-icon/moon_702471" target="_blank" rel="noreferrer">Flaticon</a>.</p>
         </section>
       </main>
     </div>

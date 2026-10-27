@@ -35,3 +35,7 @@ The production site is written to `dist/` and can be deployed as a static site t
 The generator creates a valid solved 6×6 board, derives `=` and `×` relationships from it, removes clues in a seeded order, and uses the solver after each removal to keep exactly one possible solution. The seed includes the game version, requested mode/level, and difficulty, so the same input always recreates the same puzzle.
 
 Daily puzzles use `daily-YYYY-MM-DD`, where the date is UTC. This makes the daily challenge switch simultaneously worldwide without a server.
+
+## Attribution
+
+Moon icon by [Good Ware](https://www.flaticon.com/authors/good-ware) from [Flaticon](https://www.flaticon.com/free-icon/moon_702471), recolored and mirrored for the game interface. Used under the Flaticon free license with attribution.
